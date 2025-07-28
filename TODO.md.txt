@@ -1,0 +1,57 @@
+# TillClear Development To-Do List
+
+Based on PRD Version 1.0 (with incorporated clarifications from conversation)
+
+## Setup & Prerequisites (Days 1-3)
+
+*   **[Easy]** Activate required tools: Enable payment request feature in Kopokopo dashboard.
+*   **[Easy]** Activate required tools: Generate Zoho CRM API token (Auth Token, Organization ID).
+*   **[Easy]** Activate required tools: Sign up for n8n Cloud (Starter plan) account.
+*   **[Medium]** Connect core tools in n8n: Configure Kopokopo API credentials (Key, Secret).
+*   **[Medium]** Connect core tools in n8n: Configure Zoho CRM credentials (Auth Token, Org ID).
+*   **[Medium]** Sync CRM product catalog: Set up n8n workflow to sync *active* products from Zoho Books/Inventory to a data store usable by the form dropdown.
+
+## Feature A: Staff Dashboard (n8n Form) (Week 1)
+
+*   **[Medium]** Design Form UI: Create n8n form node with fields: Customer Phone, Product (Dropdown), Size/Color, Transaction Type (Dropdown), Delivery Notes (Optional Text), Payment Request Button.
+*   **[Medium]** Implement Field Logic - Phone: Add logic to auto-convert `07...` to `+2547...`.
+*   **[Medium]** Implement Field Logic - Product Dropdown: Connect the dropdown to the synced *active* product list from the setup phase.
+*   **[Medium]** *Clarification Needed*: Finalize Size/Color field behavior (dependent dropdown based on product, or direct SKU selection via main dropdown). Implement chosen logic.
+*   **[Easy]** Implement Field Logic - Transaction Type: Set default to "Sale". Ensure "Personal Transfer" option exists.
+*   **[Medium]** Implement Critical Rules - Button State: Configure logic to disable "Request Payment + Verify Product" button until mandatory fields (Customer Phone, Product, Size/Color logic, Transaction Type) are filled.
+*   **[Medium]** Implement Critical Rules - Personal Transfer Flow: Add logic so selecting "Personal Transfer" skips the payment request step.
+*   **[Easy]** Implement Critical Rules - Verification Status: Add a status message on the form that updates to "Product verified. Payment documentation ready." when mandatory fields are complete.
+*   **[Medium]** Implement Payment Request Logic: Configure the "Request Payment + Verify Product" button to trigger the n8n workflow that generates the reference and sends the payment request via Kopokopo API. Pass form data (especially the reference) to this step.
+
+## Feature B: Transaction Reference Generator (Integrated with A & D)
+
+*   **[Medium]** Design Reference Logic: Finalize the logic for `TILL-SOC-{SKU}-{DATE}-{RANDOM}`. Clarify how SKU is derived (from selected product name/code or specific variant if applicable).
+*   **[Medium]** Implement Reference Generation: Create n8n function/code node to generate the unique `TILL-SOC-...` reference upon form submission (for social) or WooCommerce webhook trigger (for website). Ensure it uses the correct product identifier (SKU or variant code).
+*   **[Hard]** Integrate Reference into Payment Request: Ensure the generated reference is correctly passed to and included in the Kopokopo payment request.
+
+## Feature C: CRM Sync (Financial Documentation) (Week 2)
+
+*   **[Medium]** Workflow Trigger - Draft: Configure n8n workflow to trigger "Create Draft Sales Record" immediately upon successful form submission.
+*   **[Medium]** Create Draft Sales Record: Build n8n workflow steps to create a record in Zoho CRM. Map fields: Product (selected item/SKU), Size/Color (or specific variant), Customer Phone, generated Transaction Reference (`TILL-SOC-...`). Mark as draft.
+*   **[Medium]** Workflow Trigger - Completion: Configure n8n workflow to listen for the Kopokopo payment confirmation webhook.
+*   **[Medium]** Complete Sales Record: Build n8n workflow steps to update the previously created draft record in Zoho CRM upon webhook receipt. Add/update fields: Payment timestamp (from webhook), Status = "Completed". Ensure lookup uses the `TILL-SOC-...` reference.
+*   **[Medium]** Tag Transaction Type: Within the completion workflow, ensure the Zoho CRM record is tagged with the "Transaction Type" selected in the staff form ("Sale" or "Personal Transfer").
+*   **[Hard]** Generate Financial Report: Develop a scheduled n8n workflow (daily) that queries Zoho CRM and Kopokopo (if necessary) to calculate and potentially send/store:
+    *   Percentage of payments with product verification (linked via `TILL-SOC-...`).
+    *   Documentation timeliness (difference between payment time and CRM record creation/update time).
+
+## Feature D: Website Order Sync (WooCommerce) (Week 3)
+
+*   **[Medium]** Connect Webhook: Set up the WooCommerce webhook in n8n to listen for new orders.
+*   **[Hard]** Process Webhook Data: Create n8n workflow steps to parse the incoming WooCommerce order data.
+*   **[Medium]** Auto-tag Transaction Type: Automatically set the "Transaction Type" to "Sale" for website orders within the workflow.
+*   **[Medium]** Generate Reference for Website Orders: Integrate the reference generation logic (Feature B) into the website order workflow, triggered by the webhook. Use product SKU from the WooCommerce order data.
+*   **[Medium]** Sync to CRM (Unified Flow): Ensure the CRM sync logic (Feature C - Draft and Complete) is reused or called by the website order workflow. Pass the *generated* `TILL-SOC-...` reference to this CRM sync process.
+*   **[Medium]** Store Processor ID: Modify the CRM record creation/update steps to also capture and store the original payment processor transaction ID from Kopokopo into a custom field in Zoho CRM.
+
+## Go-Live & Wrap-Up (End of Week 3 / Week 4)
+
+*   **[Easy]** Staff Training: Create a 15-minute training video demonstrating the new workflow.
+*   **[Easy]** Verify Documentation Accuracy: Manually check the first 10 live orders to ensure the entire process (reference generation, CRM sync draft & completion, tagging) works correctly.
+*   **[Medium]** Audit & Refine: Based on the first 10 orders, make any necessary adjustments to workflows or field logic.
+*   **[Medium]** *Clarification Needed*: Reconcile the roadmap timeline (Week 1-3 tasks, Go Live in Week 3) with the stated "4 weeks (no-code implementation)" target. Adjust task durations or scope if needed.
